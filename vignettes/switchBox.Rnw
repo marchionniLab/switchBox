@@ -1,0 +1,780 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Luigi Marchionni and Bahman Afsari
+%%% March 20 2014
+%%% Baltimore
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \VignetteIndexEntry{Working with the switchBox package}
+% \VignetteKeywords{Classification, Prediction, Microarray, Cancer, RNAExpressionData}
+% \VignettePackage{switchBox}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%% Begin Document
+\documentclass[12pt]{article}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%% Preamble
+% \input{preamble}
+
+
+%%% Additional packages
+\usepackage{Sweave}
+\usepackage{times}
+\usepackage[colorlinks=TRUE, urlcolor=blue, citecolor=blue]{hyperref}
+\usepackage{color}
+\usepackage[usenames, dvipsnames]{xcolor}
+
+% \usepackage{authblk}
+% \usepackage{fullpage}
+
+%%% Sweave options
+\SweaveOpts{prefix.string=plots, eps=FALSE,echo=TRUE, keep.source=TRUE}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% New commands for R stuff
+\newcommand{\software}[1]{\textsf{#1}}
+\newcommand{\R}{\software{R}}
+\newcommand{\Bioc}{\software{Bioconductor}}
+\newcommand{\Robject}[1]{{\texttt{#1}}}
+\newcommand{\Rfunction}[1]{{\texttt{#1}}}
+\newcommand{\Rpackage}[1]{{\texttt{#1}}}
+\newcommand{\Rclass}[1]{{\texttt{#1}}}
+\newcommand{\Rmethod}[1]{{\texttt{#1}}}
+\newcommand{\Rfunarg}[1]{{\texttt{#1}}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% fancy Sweave
+\DefineVerbatimEnvironment{Sinput}{Verbatim}{xleftmargin=1em, fontshape=sl, formatcom=\color{MidnightBlue}, fontsize=\scriptsize}
+%\DefineVerbatimEnvironment{Sinput}{Verbatim} {xleftmargin=1em}
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{xleftmargin=1em,fontshape=sl,formatcom=\color{OliveGreen}, fontsize=\scriptsize}
+%\DefineVerbatimEnvironment{Soutput}{Verbatim}{xleftmargin=1em}
+\DefineVerbatimEnvironment{Scode}{Verbatim}{xleftmargin=1em,fontshape=sl,formatcom=\color{BrickRed}, fontsize=\scriptsize}
+%\DefineVerbatimEnvironment{Scode}{Verbatim}{xleftmargin=1em}
+\fvset{listparameters={\setlength{\topsep}{0pt}}}
+
+\renewenvironment{Schunk}{\vspace{\topsep}}{\vspace{\topsep}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+%%% Title
+\title{Training and testing a K-Top-Scoring-Pair (KTSP) classifier with switchBox.}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Authors and
+\author{Bahman Afsari and Luigi Marchionni\\\\
+%%% Affiliations
+The Sidney Kimmel Comprehensive Cancer Center,\\
+Johns Hopkins University School of Medicine
+}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Date
+\date{Modified: June 20, 2014.  Compiled: \today}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Document
+\begin{document}
+
+\setlength{\parskip}{0.2\baselineskip}
+\setlength{\parindent}{0pt}
+\setkeys{Gin}{width=\textwidth}
+
+\maketitle
+\tableofcontents
+
+<<start, eval=TRUE, echo=FALSE, cache=FALSE>>=
+options(width=85)
+options(continue=" ")
+rm(list=ls())
+@ 
+
+%\newpage
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{ {\Large \bf {Introduction}} }
+The \Rpackage{switchBox} package allows to train and validate
+a K-Top-Scoring-Pair (KTSP) classifier, 
+as used by Marchionni et al in \cite{Marchionni:2013aa}.
+KTSP is an extension of the TSP classifier described by Geman and colleagues
+\cite{Geman:2004aa,Tan:2005aa,Xu:2005aa}.
+The TSP algorithm is a simple binary classifier based on
+the ordering of two measurements.Basing the prediction solely on the ordering 
+of a small number of features (e.g. gene expressions), known as ranked based 
+methodology, seems a promising approach to to build robust classifiers to data 
+normalization and rise to more transparent decision rules. The first and simplest 
+of such methodologies, the Top-Scoring Pair ({\em TSP}) classifier, was 
+introduced in \cite{Geman:2004aa} and is based on reversal of two features 
+(e.g. the expressions of two genes). Multiple extensions were proposed 
+afterwards, e.g. \cite{Tan:2005aa} and many of these extensions have 
+been successfully applied for diagnosis and prognosis of cancer such as 
+recurrence of breast cancer in \cite{Marchionni:2013aa}. A popular 
+successor of {\em TSP} classifiers is {\em kTSP} (\cite{Tan:2005aa}), 
+which applies the majority voting among multiple of the the reversal of 
+pairs of features. In addition to being applied by peer scientists, {\em kTSP} 
+shown its power by wining the ICMLA the challenge for cancer classification 
+in the presence of other competitive methods such as Support Vector Machines
+(\cite{ICMLA08}).
+
+%\textcolor{red}{ADD about TSP and KTSP}
+kTSP decision is based on $k$ feature (e.g. gene) pairs, say,
+\(\Theta=\{(i_1,j_1),\dots,(i_k,j_k)\}\). If we denote the feature profile 
+with \(\underline{X}=(X_1,X_2,\dots)\), the family of rank based classifiers 
+is an aggregation of the comparisons \(X_{i_l}<X_{j_l}\). Specifically, the kTSP 
+statistics can be written as: \[\kappa = \{\sum_{l=1}^k I(X_{i_l}<X_{j_l})\}-\frac{k}{2},\] 
+where $I$ is the indicator function. The kTSP classification decision can be produced 
+by thresholding the \(\kappa\), i.e. \(\hat{Y}=I\{\kappa>\tau\}\) provided the 
+labels \(Y \in \{0,1\}\). The standard threshold is \(\tau=0\). The only parameters 
+required for calculating \(\kappa\) is the feature pairs. Usually, disjoint feature pairs are 
+desirable because an outlier feature value cannot heavily influence the decision. 
+In the introductory paper to kTSP (\cite{kTSPPaper}), the authors proposed an 
+ad-hoc method for feature selection. This method was based on score for each 
+pair of features which measures how discriminative is a comparison of the feature values. 
+If we denote the score related to the gene \(i\) and \(j\) by \(s_{ij}\), then the score was 
+defined as \[s_{ij}=|P(X_i<X_j|Y=1)-P(X_i<X_j|Y=0)|.\] We can sort the pairs of genes 
+by this score. A pair with large score (close to one) indicates that the reversal of the feature 
+value predicts the phenotype accurately.
+
+In \cite{KTSPAOAS}, an analysis of variance was proposed for gene selection in kTSP 
+and other rank-based classifiers. This method finds the feature pairs which make the 
+distribution of \(\kappa\) under two classes \emph{ far apart} in the analysis of 
+variance sense. In mathematical words, we seek the set of feature pairs, \(\Theta^*\), that
+\[\Theta^* = \arg\max_{\Theta}\frac{E(\kappa(\Theta)|Y=1)-E(\kappa(\Theta)|Y=0)}{\sqrt{Var(\kappa(\Theta)|Y=1)+Var(\kappa(\Theta)|Y=0)}}.\] 
+This method automatically chooses the number of genes and hence, 
+it is almost a parameter free method. However, the search for \(\Theta\) 
+is very intensive search. So, a greedy and approximate search was proposed 
+to find the optimal set of gene pairs. In practice, the only parameter required 
+is a maximum cap for the number pairs, $k$.
+
+The \Rpackage{switchBox} package contains several utilities 
+enabling to:
+
+\begin{enumerate}
+  \item Filter the features to be used to develop the classifier
+    (\textit{i.e.}, differentially expressed genes);
+  \item Compute the scores for all available feature pairs
+    to identify the top performing TSPs;
+  \item Compute the scores for selected feature pairs
+    to identify the top performing TSPs;
+  \item Identify the number of top pairs, $K$, to be used in the final classifier;
+  \item Compute individual TSP votes for one class or the other 
+    and aggregate the votes based on various methods;
+  \item Classify new samples based on the top KTSP 
+    based on various methods;
+\end{enumerate}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{ {\Large \bf {Installing the package}} }
+
+Download and install the package \Rpackage{switchBox} from {\Bioc}.
+<<eval=FALSE,echo=TRUE,cache=FALSE>>=
+source("http://bioconductor.org/biocLite.R")
+biocLite("switchBox")
+@ 
+
+Load the library.
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+require(switchBox)
+@
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Data structure}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Training set}
+
+Load the example training data contained in the \Rpackage{switchBox} package.
+
+<<trainData,eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Load the example data for the TRAINING set
+data(trainingData)
+@
+
+The object \Robject{matTraining} is a numeric matrix containing 
+gene expression data for the 78 breast cancer patients and the
+70 genes used to implement the MammaPrint assay \cite{Glas:2006aa}.
+This data was obtained from from the \Rpackage{MammaPrintData} 
+package, as described in  \cite{Marchionni:2013aa}.
+Samples are stored by column and genes by row.
+Gene annotation is stored as  \Robject{rownames(matTraining)}.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+class(matTraining)
+dim(matTraining)
+str(matTraining)
+@
+
+The factor \Robject{trainingGroup} contains
+the prognostic information:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Show group variable for the TRAINING set
+table(trainingGroup)
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Testing set}
+
+Load the example testing data contained in the \Rpackage{switchBox} package.
+
+<<testData,eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Load the example data for the TEST set
+data(testingData)
+@
+
+The object \Robject{matTesting} is a numeric matrix containing 
+gene expression data for the 307 breast cancer patients and the
+70 genes used to validate the MammaPrint assay \cite{Buyse:2006aa}.
+This data was obtained from from the \Rpackage{MammaPrintData} 
+package, as described in  \cite{Marchionni:2013aa}.
+Also in this case samples are stored by column and genes by row.
+Gene annotation is stored as  \Robject{rownames(matTraining)}.
+ 
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+class(matTesting)
+dim(matTesting)
+str(matTesting)
+@
+
+The factor \Robject{testingGroup} contains
+the prognostic information:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Show group variable for the TEST set
+table(testingGroup)
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Training KTSP algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Unrestricted KTSP classifiers}
+
+We can train the KTSP algoritm using all possible feature pairs
+-- unrestricted KTSP classifier --
+with or without statistical feature filtering, 
+using the \Rfunction{SWAP.KTSP.Train} function.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Default statistical filtering}
+
+Training an unrestricted KTSP predictor using a statistical feature filtering 
+is the default and it  is achieved  by using the default parameters, as follows:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### The arguments to the "SWAP.KTSP.Train" function
+args(SWAP.KTSP.Train)
+### Train a classifier using default filtering function based on the Wilcoxon test
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, krange=c(3:15))
+### Show the classifier
+classifier
+### Extract the TSP from the classifier
+classifier$TSPs
+@ 
+
+Below is shown the way the default feature filtering works.
+The \Rfunction{SWAP.Filter.Wilcoxon} function
+takes the phenotype factor, the predictor data,
+the number of feature to be returned,
+and a logical value to decide whether to include 
+equal number of featured positively and negatively
+associated with the phenotype to be predicted.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### The arguments to the "SWAP.KTSP.Train" function
+args(SWAP.Filter.Wilcoxon)
+### Retrieve the top best 4 genes using default Wilcoxon filtering
+### Note that there are ties
+SWAP.Filter.Wilcoxon(trainingGroup, matTraining, featureNo=4)
+@ 
+
+
+Train a classifier  using the \Rfunction{SWAP.Filter.Wilcoxon} 
+filtering function.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train a classifier from the top 4 best genes 
+### according to Wilcoxon filtering function
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+			      FilterFunc=SWAP.Filter.Wilcoxon, featureNo=4)
+### Show the classifier
+classifier
+@ 
+
+
+Train a classifier  using all possible features:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### To use all features "FilterFunc" must be set to NULL
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, FilterFunc=NULL)
+### Show the classifier
+classifier
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsubsection{Altenative filtering methods}
+
+Training can also be achieved using alternative filtering methods.
+These methods can be specified by passing a different 
+filtering function to \Rfunction{SWAP.KTSP.Train}.
+These functions should use th \Rfunarg{phenoGroup},
+\Rfunarg{inputData} arguments, as well as any other 
+necessary argument (passed using \Rfunarg{...}),
+as shown below.
+
+
+For instance, we can define an alternative filtering function 
+selecting 10 random features.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### An alternative filtering function selecting 20 random features
+random10 <- function(situation, data) { sample(rownames(data), 10) }
+random10(trainingGroup, matTraining)
+@ 
+
+
+Below is a more realistic example of an alternative filtering function.
+In this case we use the {\R } \Rfunction{t.test} function to select the 
+features with an absolute t-statistics larger than a specified quantile.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### An alternative filtering function based on a t-test
+topRttest <- function(situation, data, quant = 0.75) {
+	out <- apply(data, 1, function(x, ...) t.test(x ~ situation)$statistic )
+	names(out[ abs(out) > quantile(abs(out), quant) ])
+}
+### Show the top 5% features using the newly defined filtering function
+topRttest(trainingGroup, matTraining, quant=0.95)
+@ 
+
+
+Train a classifier using the alternative filtering function
+based on the t-test and also define the max number of TSP 
+using \Rfunarg{krange}.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train with t-test and krange
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+			      FilterFunc = topRttest, quant = 0.9, krange=c(15:30) )
+### Show the classifier
+classifier
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Training a Restricted KTSP algorithm}
+
+The \Rpackage{swithcBox} allows to training a KTSP classifier
+using a pre-specified set of restricted feature pairs.
+This can be useful to implement KTSP classifiers restricted 
+to specific TSPs based, for instane, on prior biological information (\cite{iTSP}).
+To this end, the user must specify a set of candidate pairs by setting 
+\Rfunarg{RestrictedPairs} argument.
+
+As an example, we can define a set of candidate pairs by randolmly selecting 
+some of the rownames from the \Robject{inputMat} matrix and the classifier
+chooses from this set.
+
+In a real example these pairs would  be provided by the user,
+for instance usinf  prior biological knowledge. 
+The restricted pairs must contain valid feature names, 
+\textit{i.e.} the row names of \Robject{inputMat}.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+set.seed(123)
+somePairs <- matrix(sample(rownames(matTraining), 6^2, replace=FALSE), ncol=2)
+head(somePairs)
+dim(somePairs)
+@ 
+
+
+Train a classifier using the set of restricted feature pairs
+and the default filtering:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+			      RestrictedPairs = somePairs, krange=3:16)
+### Show the classifier
+classifier
+@ 
+
+
+Train a classifier using a set of restricted feature pairs,
+defining the maximum number of TSP using \Rfunarg{krange}
+and also filtering the features by T-test.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+			      RestrictedPairs = somePairs,
+			      FilterFunc = topRttest, quant = 0.3,
+			      krange=c(3:10) )
+### Show the classifier
+classifier
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Calculate and aggregates the TSP votes}
+
+The \Rfunction{SWAP.KTSP.Statistics} function can be used to
+compute and aggregate the TSP votes
+using alternative functions to combine the votes.
+The default method is the count of the signed TSP votes.
+We can also  pass a different function to combine the KTSPs.
+This function takes an argument \Rfunarg{x} 
+-- a logical vector corresponding to the TSP votes --
+of length equal to the number of columns
+(\textit{e.g.}, the number of cancer patients under analysis)
+and aggregates the votes of all $K$ TSPs of the classifier identified 
+by the training proces (see the \Rfunction{SWAP.KTSP.Train} function).
+
+Here we will use the default parameters 
+(the count of the signed TSP votes)
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train a classifier
+classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+			      FilterFunc = NULL, krange=8)
+### Compute the statistics using the default parameters:
+### counting the signed TSP votes
+ktspStatDefault <- SWAP.KTSP.Statistics(inputMat = matTraining,
+    classifier = classifier)
+### Show the components in the output
+names(ktspStatDefault)
+### Show some of the votes
+head(ktspStatDefault$comparisons[ , 1:2])
+### Show default statistics
+head(ktspStatDefault$statistics)
+@ 
+
+
+Here we will use the sum to aggregate the TSP votes 
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Compute
+ktspStatSum <- SWAP.KTSP.Statistics(inputMat = matTraining,
+    classifier = classifier, CombineFunc=sum)
+### Show statistics obtained using the sum
+head(ktspStatSum$statistics)
+@ 
+
+
+Here, for instance, we will apply a hard treshold equal to 2
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Compute
+ktspStatThreshold <- SWAP.KTSP.Statistics(inputMat = matTraining,
+    classifier = classifier,  CombineFunc = function(x) sum(x) > 2 )
+### Show statistics obtained using the threshold
+head(ktspStatThreshold$statistics)
+@ 
+
+
+
+We can also make a heatmap showing the individual TSPs votes
+(see Figure~\ref{fig:heatmap} below).
+
+<<eval=FALSE,echo=TRUE,cache=FALSE>>=
+### Make a heatmap showing the individual TSPs votes
+colorForRows <- as.character(1+as.numeric(trainingGroup))
+heatmap(1*ktspStatThreshold$comparisons, scale="none",
+    margins = c(10, 5), cexCol=0.5, cexRow=0.5,
+    labRow=trainingGroup, RowSideColors=colorForRows)
+@ 
+
+\newpage
+
+\begin{figure}
+\begin{center}
+  \setkeys{Gin}{width=1.0\textwidth}
+<<label=fig1,eval=TRUE,echo=FALSE,cache=FALSE,fig=TRUE, width=12, height=14>>=
+### Make a heatmap showing the individual TSPs votes
+colorForRows <- as.character(1+as.numeric(trainingGroup))
+heatmap(1*ktspStatThreshold$comparisons, scale="none",
+    margins = c(10, 5), cexCol=0.85, cexRow=1,
+    labRow=trainingGroup, RowSideColors=colorForRows)
+@
+\end{center}
+\caption{\small Heatmap showing the individual TSP votes.}
+\label{fig:heatmap}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Classifiy samples and compute the classifier performance}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Classifiy training samples}
+
+The \Rfunction{SWAP.KTSP.Classify} function allows to
+classify one or more samples using the classifier identified 
+by \Rfunction{SWAP.KTSP.Train}. 
+The \textbf{resubstitution} performance in the 
+training set is shown below.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Show the classifier
+classifier
+### Apply the classifier to the TRAINING set
+trainingPrediction <- SWAP.KTSP.Classify(matTraining, classifier)
+### Show
+str(trainingPrediction)
+### Resubstitution performance in the TRAINING set
+table(trainingPrediction, trainingGroup)
+@ 
+
+
+We can apply the classifier using a specific decision to 
+combine the $K$ TSP as specified with the
+\Rfunarg{DecideFunc} argument of \Rfunction{SWAP.KTSP.Classify}.
+This argument is a function working on a logical vector \Rfunarg{x}
+containing the votes of each TSP.
+We can for instance count all votes for class one and then classify 
+a patient in one class or the other based on a specific threshold.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Usr a CombineFunc based on  sum(x) > 5.5
+trainingPrediction <- SWAP.KTSP.Classify(matTraining, classifier,
+					 DecisionFunc = function(x) sum(x) > 5.5 )
+### Show
+str(trainingPrediction)
+### Resubstitution performance in the TRAINING set
+table(trainingPrediction, trainingGroup)
+@ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Classifiy validation samples}
+
+We can apply the trained classifier to one new sample of the test set:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Classify one sample
+testPrediction <- SWAP.KTSP.Classify(matTesting[ , 1, drop=FALSE], classifier)
+### Show
+testPrediction
+@ 
+
+
+We can apply the trained classifier to a new set of samples,
+using the defaul decision rule based on the 
+``majority wins'' principle:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Apply the classifier to the complete TEST set
+testPrediction <- SWAP.KTSP.Classify(matTesting, classifier)
+### Show
+table(testPrediction)
+### Resubstitution performance in the TEST set
+table(testPrediction, testingGroup)
+@ 
+
+
+We can apply the trained classifier to predict of a new set of samples,
+using an alternative decision rule specified by \Rfunarg{DecideFunc}
+For instance, we can classify by thresholding vote counts in favor 
+of one of the classes.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### APlly the classifier using sum(x)  > 5.5
+testPrediction <- SWAP.KTSP.Classify(matTesting, classifier,
+				     DecisionFunc = function(x) sum(x) > 5.5 )
+### Resubstitution performance in the TEST set
+table(testPrediction, testingGroup)
+@ 
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Compute the signed TSP scores}
+
+The \Rpackage{switchBox} allows also to compute the 
+individual scores for each TSP of interest.
+This can be achieved by using the 
+\Rfunction{SWAP.CalculateSignedScore} function
+as shown below.
+
+Compute the scores using all features for all possible pairs:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Compute the scores using all features for all possible pairs
+scores <- SWAP.CalculateSignedScore(matTraining,  trainingGroup, FilterFunc=NULL)
+### Show scores
+class(scores)
+dim(scores$score)
+@ 
+
+Extract the TSP scores of interest --
+the absolute value correspond to the scores returned 
+by \Rfunction{SWAP.KTSP.Train}.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Get the scores
+scoresOfInterest <- diag(scores$score[ classifier$TSPs[,1] , classifier$TSPs[,2] ])
+### Their absolute value should corresponf to the scores returned by SWAP.KTSP.Train
+all(classifier$score == abs(scoresOfInterest))
+@ 
+
+
+The \Rfunction{SWAP.CalculateSignedScore} function
+accept the same argumets used by \Rfunction{SWAP.KTSP.Train}.
+It can  compute the scores with or without a filtering function
+and using or not the restricted pairs,  as specified 
+by \Rfunarg{FilterFunc} and \Rfunarg{RestrictedPairs} respectively.
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Compute the scores with default filtering function
+scores <- SWAP.CalculateSignedScore(matTraining, trainingGroup, featureNo=20 )
+### Show scores
+dim(scores$score)
+### Compute the scores without the default filtering function
+### and using restricted pairs
+scores <- SWAP.CalculateSignedScore(matTraining, trainingGroup,
+				    FilterFunc = NULL, RestrictedPairs = somePairs )
+### Show scores
+class(scores$score)
+length(scores$score)
+@
+
+
+In Figure~\ref{fig:scores} is shown the histograms for all possible
+TSP scores.
+
+<<eval=FALSE,echo=TRUE,cache=FALSE>>=
+hist(scores$score, col="salmon", main="TSP scores")
+@
+
+\begin{figure}
+\begin{center}
+  \setkeys{Gin}{width=0.75\textwidth}
+<<label=fig2,eval=TRUE,echo=TRUE,cache=FALSE,fig=TRUE, width=9, height=9>>=
+hist(scores$score, col="salmon", main="TSP scores")
+@
+\end{center}
+\caption{\small Histograms of all TSP socres.}
+\label{fig:scores}
+\end{figure}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Use of deprecated functions}
+
+The two functions \Rfunction{KTSP.Train} and \Rfunction{KTSP.Classify}
+are deprecated and are included in the package only for backward
+compatibility. They have been substituted by respectively
+\Rfunction{SWAP.KTSP.Train} and \Rfunction{SWAP.KTSP.Classify}.
+These functions were used to train and validate the 8-TSP classifier
+described by Marchionni et al \cite{Marchionni:2013aa}
+and are maintained for reproducibility purposes. 
+Example on the way they are used follows.
+
+
+Preparation of phenotype information (a numeric vector
+with values equal to 0 or 1) for training the KTSP classifier:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Phenotypic group variable for the 78 samples
+table(trainingGroup)
+levels(trainingGroup)
+### Turn into a numeric vector with values equal to 0 and 1
+trainingGroupNum <- as.numeric(trainingGroup) - 1
+### Show group variable for the TRAINING set
+table(trainingGroupNum)
+@ 
+
+KTSP classifier training using the deprected function:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Train a classifier using default filtering function based on the Wilcoxon test
+classifier <- KTSP.Train(matTraining, trainingGroupNum, n=8)
+### Show the classifier
+classifier
+@ 
+
+
+KTSP classifier performance using the deprected function:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Apply the classifier to one sample of the TEST set using
+### sum of votes less  than 2.5
+trainPrediction <- KTSP.Classify(matTraining, classifier,
+				 combineFunc = function(x) sum(x) < 2.5)
+### Contingency table
+table(trainPrediction, trainingGroupNum)
+@ 
+
+
+Preparation of phenotype information (a numeric vector
+with values equal to 0 or 1) for testing the KTSP classifier
+on new data:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Phenotypic group variable for the 307 samples
+table(testingGroup)
+levels(testingGroup)
+### Turn into a numeric vector with values equal to 0 and 1
+testingGroupNum <- as.numeric(testingGroup) - 1
+### Show group variable for the TEST set
+table(testingGroupNum)
+@ 
+
+
+Testing on new data and getting KTSP classifier performance
+using the deprected function:
+
+<<eval=TRUE,echo=TRUE,cache=FALSE>>=
+### Apply the classifier to one sample of the TEST set using
+### sum of votes less than 2.5
+testPrediction <- KTSP.Classify(matTesting, classifier,
+     combineFunc = function(x) sum(x) < 2.5)
+### Show prediction
+table(testPrediction)
+### Contingency table
+table(testPrediction, testingGroupNum)
+@
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\pagebreak
+\section{ {\Large \bf {System Information}} }
+
+Session information:
+
+<<sessioInfo, echo=TRUE, eval=TRUE, cache=FALSE, results=tex>>=
+toLatex(sessionInfo())
+@ 
+
+%\pagebreak
+\section{ {\Large \bf {Literature Cited}} }
+   \bibliographystyle{unsrt}
+   \bibliography{./switchBox}
+
+\end{document}

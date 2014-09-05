@@ -1,0 +1,20 @@
+bibentry("Article",
+         title = "{A simple and reproducible breast cancer prognostic test}",
+         author = c(person("Marchionni", "Luigi"),
+	person("Afsari", "Bahman"),
+	person("Geman", "Donald"),
+	person("Leek", "Jeffrey T")),
+         journal = "BMC Genomics",
+         year = 2013,
+         issue = "1",
+         volume = "14",
+	 pages = "1--7",
+	 doi = "10.1186/1471-2164-14-336",
+	 pmid = "23682826",
+         textVersion = 
+         paste("Marchionni L, et al.",
+               "A simple and reproducible breast cancer prognostic test.",
+               "BMC Genomics, 2013;14(1):336"),
+         mheader = "To cite switchBox in publications use:"
+         )
+

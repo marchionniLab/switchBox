@@ -1,0 +1,10 @@
+useDynLib("switchBox", .registration=TRUE)
+
+export(SWAP.CalculateSignedScore,
+	SWAP.KTSP.Train,
+	SWAP.KTSP.Statistics,
+	SWAP.KTSP.Classify,
+	SWAP.Filter.Wilcoxon,
+	KTSP.Train,
+	KTSP.Classify)
+
