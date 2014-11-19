@@ -1,4 +1,4 @@
 gitBioc.switchBox
 =================
 
-Biconductor switchBox package repository 
+Bioconductor switchBox package repository 
