@@ -1,4 +1,24 @@
 bibentry("Article",
+         title = "{switchBox: an R package for k-Top Scoring Pairs classifier development}",
+         author = c(erson("Afsari", "Bahman"),
+	person("Elana", "Fertig"),
+	person("Geman", "Donald"),
+	person("Marchionni", "Luigi")),
+         journal = "Bionformatics",
+         year = 2015,
+         issue = "2",
+         volume = "31",
+	 pages = "273--274",
+	 doi = "10.1093/bioinformatics/btu622",
+	 pmid = "25262153",
+         textVersion = 
+         paste("Afsari A, et al.",
+               "switchBox: an R package for k-Top Scoring Pairs classifier development.",
+               "Bioinformatics. 2015 Jan 15;31(2):273-4"),
+         mheader = "To cite switchBox in publications use:"
+         )
+
+bibentry("Article",
          title = "{A simple and reproducible breast cancer prognostic test}",
          author = c(person("Marchionni", "Luigi"),
 	person("Afsari", "Bahman"),
@@ -17,4 +37,3 @@ bibentry("Article",
                "BMC Genomics, 2013;14(1):336"),
          mheader = "To cite switchBox in publications use:"
          )
-
