@@ -1,5 +1,5 @@
 Package: switchBox
-Version: 1.0.1
+Version: 1.1.0
 Date: 2014-03-20
 Title: Utilities to train and validate classifiers based on pair
         switching using the K-Top-Scoring-Pair (KTSP) algorithm.

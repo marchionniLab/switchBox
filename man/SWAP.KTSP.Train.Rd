@@ -67,9 +67,10 @@ SWAP.KTSP.Train(inputMat, phenoGroup, krange = c(3, 5, 7:10),
     correspond to the \code{rownames(inputData)}.
     In this matrix each row corresponds to a specific TSP.
     For each TSP (\emph{i.e.} row in the \code{TSPs} matrix)
-    the order of the feature is such that the first feature
-    is larger than the second one in the phenotypic group
-    defined by the first levels of the \code{phenoGroup} factor
+    the order of the features is such that the first one
+    is on average smaller than the second one in the
+    phenotypic group defined by the first levels
+    of the \code{phenoGroup} factor
     and \emph{vice-versa}.
     The algorithm uses the mechanism
     in Afsari et al (2014) to select the number
