@@ -1,6 +1,6 @@
 bibentry("Article",
          title = "{switchBox: an R package for k-Top Scoring Pairs classifier development}",
-         author = c(erson("Afsari", "Bahman"),
+         author = c(person("Afsari", "Bahman"),
 	person("Elana", "Fertig"),
 	person("Geman", "Donald"),
 	person("Marchionni", "Luigi")),
