@@ -70,7 +70,8 @@ SWAP.KTSP.Classify(inputMat, classifier, DecisionFunc)
 
 \author{
   Bahman Afsari \email{bahman.afsari@gmail.com},
-  Luigi Marchionni \email{marchion@jhu.edu}
+  Luigi Marchionni \email{marchion@jhu.edu},
+  Wikum Dinalankara \email{wdinala1@jhmi.edu}
 }
 
 \references{

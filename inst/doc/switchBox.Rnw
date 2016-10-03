@@ -1,6 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Luigi Marchionni and Bahman Afsari
-%%% March 20 2014
+%%% Luigi Marchionni, Wikum Dinalankara and Bahman Afsari
+%%% September 22 2016
 %%% Baltimore
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -66,7 +66,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Authors and
-\author{Bahman Afsari and Luigi Marchionni\\\\
+\author{Bahman Afsari, Luigi Marchionni and Wikum Dinalankara\\\\
 %%% Affiliations
 The Sidney Kimmel Comprehensive Cancer Center,\\
 Johns Hopkins University School of Medicine
@@ -81,6 +81,7 @@ Johns Hopkins University School of Medicine
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Document
 \begin{document}
+\SweaveOpts{concordance=TRUE}
 
 \setlength{\parskip}{0.2\baselineskip}
 \setlength{\parindent}{0pt}
@@ -269,8 +270,10 @@ table(testingGroup)
 We can train the KTSP algoritm using all possible feature pairs
 -- unrestricted KTSP classifier --
 with or without statistical feature filtering, 
-using the \Rfunction{SWAP.KTSP.Train} function.
+using the \Rfunction{SWAP.Train.KTSP} function.
 
+Note that \Rfunction{SWAP.KTSP.Train} is deprecated
+and maintained only for legacy reasons.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \subsubsection{Default statistical filtering}
@@ -279,10 +282,10 @@ Training an unrestricted KTSP predictor using a statistical feature filtering
 is the default and it  is achieved  by using the default parameters, as follows:
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
-### The arguments to the "SWAP.KTSP.Train" function
-args(SWAP.KTSP.Train)
+### The arguments to the "SWAP.Train.KTSP" function
+args(SWAP.Train.KTSP)
 ### Train a classifier using default filtering function based on the Wilcoxon test
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, krange=c(3:15))
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup, krange=c(3:15))
 ### Show the classifier
 classifier
 ### Extract the TSP from the classifier
@@ -298,7 +301,7 @@ equal number of featured positively and negatively
 associated with the phenotype to be predicted.
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
-### The arguments to the "SWAP.KTSP.Train" function
+### The arguments to the "SWAP.Train.KTSP" function
 args(SWAP.Filter.Wilcoxon)
 ### Retrieve the top best 4 genes using default Wilcoxon filtering
 ### Note that there are ties
@@ -312,7 +315,7 @@ filtering function.
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Train a classifier from the top 4 best genes 
 ### according to Wilcoxon filtering function
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
 			      FilterFunc=SWAP.Filter.Wilcoxon, featureNo=4)
 ### Show the classifier
 classifier
@@ -323,7 +326,7 @@ Train a classifier  using all possible features:
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### To use all features "FilterFunc" must be set to NULL
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, FilterFunc=NULL)
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup, FilterFunc=NULL)
 ### Show the classifier
 classifier
 @ 
@@ -334,7 +337,7 @@ classifier
 
 Training can also be achieved using alternative filtering methods.
 These methods can be specified by passing a different 
-filtering function to \Rfunction{SWAP.KTSP.Train}.
+filtering function to \Rfunction{SWAP.Train.KTSP}.
 These functions should use th \Rfunarg{phenoGroup},
 \Rfunarg{inputData} arguments, as well as any other 
 necessary argument (passed using \Rfunarg{...}),
@@ -372,7 +375,7 @@ using \Rfunarg{krange}.
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Train with t-test and krange
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
 			      FilterFunc = topRttest, quant = 0.9, krange=c(15:30) )
 ### Show the classifier
 classifier
@@ -411,7 +414,7 @@ and the default filtering:
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Train
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
 			      RestrictedPairs = somePairs, krange=3:16)
 ### Show the classifier
 classifier
@@ -424,7 +427,7 @@ and also filtering the features by T-test.
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Train
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
 			      RestrictedPairs = somePairs,
 			      FilterFunc = topRttest, quant = 0.3,
 			      krange=c(3:10) )
@@ -447,15 +450,15 @@ This function takes an argument \Rfunarg{x}
 of length equal to the number of columns
 (\textit{e.g.}, the number of cancer patients under analysis)
 and aggregates the votes of all $K$ TSPs of the classifier identified 
-by the training proces (see the \Rfunction{SWAP.KTSP.Train} function).
+by the training proces (see the \Rfunction{SWAP.Train.KTSP} function).
 
 Here we will use the default parameters 
 (the count of the signed TSP votes)
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Train a classifier
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
-			      FilterFunc = NULL, krange=8)
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
+			      FilterFunc = NULL, krange=2:8)
 ### Compute the statistics using the default parameters:
 ### counting the signed TSP votes
 ktspStatDefault <- SWAP.KTSP.Statistics(inputMat = matTraining,
@@ -531,7 +534,7 @@ heatmap(1*ktspStatThreshold$comparisons, scale="none",
 
 The \Rfunction{SWAP.KTSP.Classify} function allows to
 classify one or more samples using the classifier identified 
-by \Rfunction{SWAP.KTSP.Train}. 
+by \Rfunction{SWAP.Train.KTSP}. 
 The \textbf{resubstitution} performance in the 
 training set is shown below.
 
@@ -630,18 +633,18 @@ dim(scores$score)
 
 Extract the TSP scores of interest --
 the absolute value correspond to the scores returned 
-by \Rfunction{SWAP.KTSP.Train}.
+by \Rfunction{SWAP.Train.KTSP}.
 
 <<eval=TRUE,echo=TRUE,cache=FALSE>>=
 ### Get the scores
 scoresOfInterest <- diag(scores$score[ classifier$TSPs[,1] , classifier$TSPs[,2] ])
-### Their absolute value should corresponf to the scores returned by SWAP.KTSP.Train
+### Their absolute value should corresponf to the scores returned by SWAP.Train.KTSP
 all(classifier$score == abs(scoresOfInterest))
 @ 
 
 
 The \Rfunction{SWAP.CalculateSignedScore} function
-accept the same argumets used by \Rfunction{SWAP.KTSP.Train}.
+accept the same argumets used by \Rfunction{SWAP.Train.KTSP}.
 It can  compute the scores with or without a filtering function
 and using or not the restricted pairs,  as specified 
 by \Rfunarg{FilterFunc} and \Rfunarg{RestrictedPairs} respectively.
@@ -688,7 +691,7 @@ hist(scores$score, col="salmon", main="TSP scores")
 The two functions \Rfunction{KTSP.Train} and \Rfunction{KTSP.Classify}
 are deprecated and are included in the package only for backward
 compatibility. They have been substituted by respectively
-\Rfunction{SWAP.KTSP.Train} and \Rfunction{SWAP.KTSP.Classify}.
+\Rfunction{SWAP.Train.KTSP} and \Rfunction{SWAP.KTSP.Classify}.
 These functions were used to train and validate the 8-TSP classifier
 described by Marchionni et al \cite{Marchionni:2013aa}
 and are maintained for reproducibility purposes. 

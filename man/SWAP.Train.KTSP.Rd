@@ -1,22 +1,22 @@
-\name{SWAP.KTSP.Train}
+\name{SWAP.Train.KTSP}
 
-\alias{SWAP.KTSP.Train}
+\alias{SWAP.Train.KTSP}
 
-\title{Deprecated function for training the K-TSP classifier. }
+\title{Function for training the K-TSP classifier.}
 
 \description{
-  \code{SWAP.KTSP.Train} trains a binary K-TSP classifier.
+  \code{SWAP.Train.KTSP} trains a binary K-TSP classifier.
   The classifiers resulting from using this function can be
   passed to \code{\link{SWAP.KTSP.Classify}}
-  for samples classification. Note that this function is 
-  deprecated and we recommend \code{SWAP.Train.KTSP} for 
-  training k-TSP classifiers.
+  for samples classification.
 }
 
 \usage{
-SWAP.KTSP.Train(inputMat, phenoGroup, krange = 2:10, 
-  FilterFunc = SWAP.Filter.Wilcoxon, RestrictedPairs, 
-  handleTies = FALSE, verbose = FALSE, ...) 
+SWAP.Train.KTSP(inputMat, phenoGroup, classes = NULL, krange = 2:10,
+  FilterFunc = SWAP.Filter.Wilcoxon, RestrictedPairs = NULL, 
+  handleTies = FALSE, disjoint = TRUE,
+  k_selection_fn = KbyTtest, k_opts = list(), score_fn = signedTSPScores, 
+  score_opts = NULL, verbose = FALSE, ...)
 }
 
 \arguments{
@@ -39,6 +39,11 @@ SWAP.KTSP.Train(inputMat, phenoGroup, krange = 2:10,
     to reorder the features in each TSP such as the first feature
     is larger than the second one in the group corresponding
     to first level, and \emph{vice-versa}.}
+  \item{classes}{ is a character vector of length 2
+    providing the phenotype class labels (case followed 
+    by control). If NULL, the levels of phenoGroup 
+    will be taken as the labels.
+  }
   \item{krange}{an integer (or a vector of integers)
     defining the candidate number of  
     Top Scoring Pairs (TSPs) from which the algorithm chooses
@@ -61,6 +66,25 @@ SWAP.KTSP.Train(inputMat, phenoGroup, krange = 2:10,
   \item{handleTies}{is a logical value indicating whether tie handling
    should be enabled or not. FALSE by default.
     }
+  \item{disjoint}{is a logical value indicating whether only disjoint
+  pairs should be considered in the final set of selected pairs; i.e. all
+  features occur only once among the set of TSPs.}
+  \item{k_selection_fn}{is a function for selecting the optimal k
+  once the TSP scores have been calculated for all the candidate pairs.
+  This can be either \code{SWAP.Kby.Measurement} or \code{SWAP.Kby.Ttest}(default),
+  or a user defined function.
+  }
+  \item{k_opts}{a list of additional arguments to be passed on to a custom
+  k selection function.}
+  \item{score_fn}{is a function for calculating TSP scores. 
+    By default, the signed TSP scores as calculated by 
+    \code{SWAP.Calculate.SignedTSPScores} will be used. The user can 
+    also provide \code{SWAP.Calculate.BasicTSPScores} to obtain basic
+    TSP scores. The output of any custom function should correspond
+    to the same strucure as the output from these two functions.}
+  \item{score_opts}{is a list of additional variables that
+    will be passed on to the scoring function as the \code{score_opts}
+    argument.}
   \item{verbose}{is a logical value indicating whether status
     messages will be printed or not throughout the function. 
     FALSE by default.
@@ -86,11 +110,14 @@ SWAP.KTSP.Train(inputMat, phenoGroup, krange = 2:10,
     The algorithm uses the mechanism
     in Afsari et al (2014) to select the number
     of pairs and pair of features.}
-  \item{$score}{scores TSP for the top \code{k} TSPs.}
-  \item{$label}{The class labels. These labels correspond to
+  \item{score}{scores TSP for the top \code{k} TSPs.}
+  \item{label}{the class labels. These labels correspond to
     the \code{phenoGroup} factor lelves and will be used
     lable any new sample classified by the \code{SWAP.KTSP.Classify}
     function.}
+  \item{tieVote}{indicates which class the pair would vote
+  for in case of a tie.
+  }
 }
 
 \seealso{
@@ -125,7 +152,7 @@ table(trainingGroup)
 
 ##################################################
 ### Train a classifier using default filtering function based on the Wilcoxon test
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, krange=c(3, 5, 8:15))
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup)
 
 ### Show the classifier
 classifier
@@ -134,56 +161,8 @@ classifier
 ##################################################
 ### Train another classifier from the top 4 best features 
 ### according to the deafault  filtering function
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
+classifier <- SWAP.Train.KTSP(matTraining, trainingGroup,
 			      FilterFunc=SWAP.Filter.Wilcoxon, featureNo=4)
-
-### Show the classifier
-classifier
-
-
-##################################################
-### To use all features "FilterFunc" must be set to NULL
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup, FilterFunc=NULL)
-
-### Show the classifier
-classifier
-
-
-##################################################
-### Train a classifier using and alternative filtering function.
-### For instance we can use the a  "t.test"  to selec the features 
-### with an absolute t-statistics larger than a specified quantile
-topRttest <- function(situation, data, quant = 0.75) {
-	out <- apply(data, 1, function(x, ...) t.test(x ~ situation)$statistic )
-	names(out[ abs(out) > quantile(abs(out), quant) ])
-}
-
-### Show the top features selected 
-topRttest(trainingGroup, matTraining, quant=0.95)
-
-### Train a classifier using the alternative filtering function
-### and also define the maximum number of TSP using "krange"
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
-			      FilterFunc = topRttest, quant = 0.75, krange=c(15:30) )
-
-### Show the classifier
-classifier
-
-
-##################################################
-### Training with restricted pairs
-
-### Define a set of specific pairs to be used for classifier development
-### For this example we will a random set of features
-### In a real example these pairs should  be provided by the user.
-set.seed(123)
-somePairs <- matrix(sample(rownames(matTraining), 6^2, replace=FALSE), ncol=2)
-head(somePairs, n=3)
-dim(somePairs)
-
-### Train a classifier using the restricted feature pairs and the default filtering
-classifier <- SWAP.KTSP.Train(matTraining, trainingGroup,
-			      RestrictedPairs = somePairs, krange=3:16)
 
 ### Show the classifier
 classifier

@@ -6,5 +6,31 @@ export(SWAP.CalculateSignedScore,
 	SWAP.KTSP.Classify,
 	SWAP.Filter.Wilcoxon,
 	KTSP.Train,
-	KTSP.Classify)
+	KTSP.Classify,
+	SWAP.GetKTSP.PredictionStats,
+	SWAP.GetKTSP.Result,
+	SWAP.GetKTSP.TrainTestResults,
+	SWAP.PlotKTSP.TrainTestROC,
+	SWAP.PlotKTSP.Genes,
+	SWAP.PlotKTSP.GenePairScatter,
+	SWAP.PlotKTSP.Votes,
+	SWAP.PlotKTSP.GenePairBoxplot,
+	SWAP.PlotKTSP.GenePairClassesBoxplot,
+	SWAP.Train.KTSP,
+	SWAP.Train.1TSP,
+	SWAP.CalculateScores,
+	SWAP.Kby.Measurement,
+	SWAP.Kby.Ttest,
+	SWAP.MakeTSPTable,
+	SWAP.ScoreMatrixToVector,
+	SWAP.ScoreVectorToMatrix,
+	SWAP.MakeTrainTestData,
+	SWAP.Calculate.SignedTSPScores,
+	SWAP.Calculate.BasicTSPScores,
+	SWAP.KTSP.CV,
+	SWAP.KTSP.LOO,
+	SWAP.GetKFoldIndices)
+
+import(pROC)
+import(gplots)
 

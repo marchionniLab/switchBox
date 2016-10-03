@@ -1,19 +1,25 @@
-\name{SWAP.CalculateSignedScore}
+\name{SWAP.CalculateScores}
 
-\alias{SWAP.CalculateSignedScore}
+\alias{SWAP.CalculateScores}
 
-\title{Function to calculate the pair-wise scores.}
+\title{Function to calculate the pair-wise scores with any given 
+  score function.}
 
 \description{
-  \code{SWAP.CalculateSignedScore} calculates the pair-wise scores
+  \code{SWAP.CalculateScores} calculates the pair-wise scores
   between features pairs. The user may pass a filtering function
   to reduce the number of starting features, or provide a restricted
-  set of pairs to limit the reported scores to this list.
+  set of pairs to limit the reported scores to this list. The user 
+  can also pass a score-calculating function by either passing one of the
+  scoring functions available in the package(i.e. 
+  \code{SWAP.Calculate.SignedTSPScores} and \code{SWAP.Calculate.BasicTSPScores}) 
+  or a custom function.
 }
 
 \usage{
-SWAP.CalculateSignedScore(inputMat, phenoGroup,
-  FilterFunc = SWAP.Filter.Wilcoxon, RestrictedPairs, handleTies = FALSE, verbose = FALSE, ...)
+SWAP.CalculateScores(inputMat, phenoGroup, classes = NULL, FilterFunc = SWAP.Filter.Wilcoxon, 
+  RestrictedPairs = NULL, handleTies = FALSE, verbose = FALSE, 
+  score_fn = signedTSPScores, score_opts = list(), ...)
 }
 
 \arguments{
@@ -29,6 +35,11 @@ SWAP.CalculateSignedScore(inputMat, phenoGroup,
     in all subsequent analyses.}
   \item{phenoGroup}{ is a factor containing the training
     phenotypes with two levels.}
+  \item{classes}{ is a character vector of length 2
+    providing the phenotype class labels (case followed 
+    by control). If NULL, the levels of phenoGroup 
+    will be taken as the labels.
+  }
   \item{FilterFunc}{is a filtering function to reduce the
     starting number of features to be used to identify the
     Top Scoring Pairs (TSPs). The default filter is based on
@@ -49,6 +60,15 @@ SWAP.CalculateSignedScore(inputMat, phenoGroup,
     messages will be printed or not throughout the function. 
     FALSE by default.
     }
+  \item{score_fn}{is a function for calculating TSP scores. 
+    By default, the signed TSP scores as calculated by 
+    \code{SWAP.Calculate.SignedTSPScores} will be used. The user can 
+    also provide \code{SWAP.Calculate.BasicTSPScores} to obtain basic
+    TSP scores. The output of any custom function should correspond
+    to the same strucure as the output from these two functions.}
+  \item{score_opts}{is a list of additional variables that
+    will be passed on to the scoring function as the \code{score_opts}
+    argument.}
   \item{...}{Additional argument passed to the filtering
   function \code{FilterFunc}.}
 }
@@ -56,20 +76,14 @@ SWAP.CalculateSignedScore(inputMat, phenoGroup,
 \value{
 The output is a list containing the following items:
 \item{labels}{the levels (phenotypes) in \code{phenoGroup}.}
-\item{score}{a matrix or a vector containing the pair-wise scores.
-  Basically, \code{score = P - Q + C}.
-  The \code{C} term is the tie breaker and proportion to
-  the secondary score to avoid the ties.}
-Note that the \code{P}, \code{Q}, and \code{score}
-list elements are matrices when scores are computed
-for all possible feature pairs, while they are vectors
-when scores are computed for restricted pairs
-defined by  \code{RestrictedPairs}.
+\item{score}{is a vector containing the pair-wise scores.}
 }
 
 \seealso{
   See \code{\link{SWAP.KTSP.Train}},
   \code{\link{SWAP.Filter.Wilcoxon}},
+  \code{\link{SWAP.Calculate.BasicTSPScores}},
+  \code{\link{SWAP.Calculate.SignedTSPScores}},
   and \code{\link{SWAP.KTSP.Statistics}}.
 }
 
@@ -94,32 +108,8 @@ data(trainingData)
 table(trainingGroup)
 
 ### Compute the scores using all features (a matrix will be returned)
-scores <- SWAP.CalculateSignedScore(matTraining,  trainingGroup, FilterFunc=NULL, )
+scores <- SWAP.CalculateScores(matTraining,  trainingGroup, FilterFunc=NULL)
 
-### Show scores
-class(scores)
-dim(scores$score)
-
-### Get the scores for a couple of features
-diag(scores$score[ 1:3 , 5:7 ])
-
-### Compute the scores using the default filtering function for 20 features
-scores <- SWAP.CalculateSignedScore(matTraining, trainingGroup, featureNo=20)
-
-### Show scores
-dim(scores$score)
-
-### Creating some random pairs
-set.seed(123)
-somePairs <- matrix(sample(rownames(matTraining), 25, replace=FALSE), ncol=2)
-
-### Compute the scores for restricted pairs (a vector will be returned)
-scores <- SWAP.CalculateSignedScore(matTraining, trainingGroup,
-				    FilterFunc = NULL, RestrictedPairs = somePairs )
-
-### Show scores
-class(scores$score)
-length(scores$score)
 
 }
 
