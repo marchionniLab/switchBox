@@ -1,5 +1,5 @@
 Package: switchBox
-Version: 1.10.0
+Version: 1.11.0
 Date: 2016-10-03
 Title: Utilities to train and validate classifiers
       based on pair switching using the
