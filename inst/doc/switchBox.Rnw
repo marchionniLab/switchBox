@@ -180,8 +180,9 @@ enabling to:
 
 Download and install the package \Rpackage{switchBox} from {\Bioc}.
 <<eval=FALSE,echo=TRUE,cache=FALSE>>=
-source("http://bioconductor.org/biocLite.R")
-biocLite("switchBox")
+if (!requireNamespace("BiocManager", quietly=TRUE))
+    install.packages("BiocManager")
+BiocManager::install("switchBox")
 @ 
 
 Load the library.
