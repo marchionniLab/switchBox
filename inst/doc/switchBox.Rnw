@@ -20,11 +20,11 @@
 
 
 %%% Additional packages
-\usepackage{Sweave}
 \usepackage{times}
 \usepackage[colorlinks=TRUE, urlcolor=blue, citecolor=blue]{hyperref}
 \usepackage{color}
 \usepackage[usenames, dvipsnames]{xcolor}
+\usepackage{Sweave}
 
 % \usepackage{authblk}
 % \usepackage{fullpage}
